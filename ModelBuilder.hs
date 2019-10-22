@@ -7,44 +7,125 @@ import Plot
 import Data.List
 import Data.Char
 
+go :: IO ()
 go =
    do 
     putStrLn "Welcome to Real-World Model Builder."
     putStrLn "Please enter the filename of the CSV file you want to model."
-    filename <- getLine 
+    filename <- getLineFixed
     dat <- readcsv filename
     model <- selectModel
-    let reportmodel = "The combined model is" ++ name model
-    putStrLn reportmodel
-    putStrLn "Please indicate the absolute tolerence."
-    abs <- getLine
-    let abstol = read abs :: Double
-    putStrLn "Please indicate the relative tolerence."
-    rel <- getLine
-    let reltol = read rel :: Double
-    putStrLn "Please indicate the maximum iteration."
-    ite <- getLine
-    let numiter = read ite :: Int
-    putStrLn "Please indicate you guess of each parameter, sperated by commas."
-    guessStr <- getLine
-    let guessL = splitsep (==',') guessStr 
-    let guess =  map (\ x -> read x :: Double) guessL
+    (abstol,reltol,numiter,guess) <- askreq (numPara model) 
     let (sol,path) = fitModelScaled abstol reltol numiter (function model, functionDer model) dat guess
     draw dat model (map fst sol)
-    return sol 
+    putStrLn "These are the parameters."
+    report1by1 sol 1 
+    let msg = "The chi2 of the fitting is "++(show (chi2 (function model (map fst sol)) dat (numPara model)))++"."
+    putStrLn msg
+    
 
-
-
+-- create a new model based on the users choice of basic models
+selectModel :: IO Model
 selectModel = 
     do
         putStrLn "There are 8 types of basics models: \n 1. Linear Model \n 2. Quadratic Model\n 3. Cubic Model\n 4. Fourth Power Model\n 5. Trig Model\n 6. Log Model\n 7. Hyperbolic Sine Model\n 8. Exponential Model"
         putStrLn "Please type in the numbers of the model you want to combine, sperated by commas."
-        order <- getLine 
-        let orderlist = splitsep (==',') order 
+        order <- getLineFixed 
+        let orderlist = rmvdup (splitsep (==',') order) 
         let model = modelCombine orderlist
+        let reportmodel = "The combined model is " ++ name model
+        putStrLn reportmodel
         return model 
 
+-- remove duplicates in a list, from assignment 2        
+rmvdup lst = [ h | (h:t) <- tails lst,  not (h `elem` t)]
+
+-- combine a list of models  
+modelCombine :: [[Char]] -> Model      
 modelCombine [] = emptyModel
-modelCombine (h:s) = combine (basicModelList !! ((digitToInt (head h))-1)) (modelCombine s)        
+modelCombine (h:s)  
+              |(digitToInt (head h)) <= 8 = combine (basicModelList !! ((digitToInt (head h))-1)) (modelCombine s) 
+              | otherwise = modelCombine s
+                    
+-- ask the requirement about the fitting
+askreq :: Int -> IO (Double, Double, Int, [Double])
+askreq n = 
+    do
+        putStrLn "Please indicate the absolute tolerence."
+        abs <- getLineFixed
+        let abstol = read abs :: Double
+        putStrLn "Please indicate the relative tolerence."
+        rel <- getLineFixed
+        let reltol = read rel :: Double
+        putStrLn "Please indicate the maximum iteration."
+        ite <- getLineFixed
+        let numiter = read ite :: Int
+        guess <- askguess n
+        return (abstol,reltol,numiter,guess)
+
+askguess :: Int -> IO [Double]
+askguess n =
+    do 
+        putStrLn "Please indicate you guess of each parameter, sperated by commas."
+        let msg = "You need "++(show n)++" parameters in total."
+        putStrLn msg
+        guessStr <- getLineFixed
+        let guessL = splitsep (==',') guessStr
+        if (length guessL) == n
+            then do 
+                    let guess =  map (\ x -> read x :: Double) guessL
+                    return guess
+            else askguess n
+
+-- report parameters one by one
+report1by1 :: (Num a1, Show a2, Show a1, Show a3) => [(a2, a3)] -> a1 -> IO ()
+report1by1 [] _ = 
+    do 
+        putStrLn "These are the all of the paraters.\n"
+
+report1by1 (h:s) n =
+    do 
+        let msgp = "The parameter "++(show n)++" is "++(show (fst h))++"."
+        let msge =  "The error of parameter "++(show n)++" is "++(show (snd h))++"."
+        putStrLn msgp
+        putStrLn msge
+        report1by1 s (n+1)
+
+
+-- calculate chi2
+chi2 :: ([Double] -> [Double]) -> [([Double], ([Double], Double))] -> Int -> Double        
+chi2 func dat nump = (chi2sum func dat) / (fromIntegral ((length dat) - nump))
+
+chi2sum :: ([Double]->[Double]) -> [([Double],([Double],Double))] -> Double 
+chi2sum func [] = 0
+chi2sum func (h:s) = ((head (func (fst h))) - (head (fst (snd h))))^2 + chi2sum func s
+
+
+-- fix get line (delete and no empty), adopted from assignment 3
+getLineFixed :: IO [Char]
+getLineFixed =
+    do
+      line <- getLine
+      let res = (fixdel line)
+      if (filter (/=' ') res) /= ""
+        then return res
+        else do
+            putStrLn "This line has no content, please input again."
+            newres <- getLineFixed
+            return newres 
+
+fixdel :: [Char] -> [Char]      
+fixdel st
+   | '\DEL' `elem` st = fixdel (remdel st)
+   | otherwise = st
+
+remdel :: [Char] -> [Char]
+remdel ('\DEL':r) = r
+remdel (a:'\DEL':r) = r
+remdel (a:r) = a: remdel r
+
+
+
+
 
 

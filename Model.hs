@@ -1,9 +1,9 @@
 module Model where
 
-data Model = Model {   name :: String
-                    ,  numPara :: Int
-                    ,  function :: [Double] -> [Double] -> [Double]
-                    ,  functionDer :: [Double] -> [Double] -> [[Double]] 
+data Model = Model {   name :: String                                    -- name of the model
+                    ,  numPara :: Int                                    -- number of parameters in the model
+                    ,  function :: [Double] -> [Double] -> [Double]      -- the function of the model
+                    ,  functionDer :: [Double] -> [Double] -> [[Double]] -- the derivative of the model
                     }  
 
 
@@ -27,13 +27,13 @@ quadModel = Model "quadratic: ax^2+bx+c" 3 quadFunc quadFuncDer
 
 -- cubic model
 cubFunc [a,b,c,d] [x] = [a*x^3 + b*x^2 + c*x +d]
-cubFuncDer [a,b,c,d] [x] = [[3*x^2, 2*x, x, 1]]
+cubFuncDer [a,b,c,d] [x] = [[x^3, x^2, x, 1]]
 
 cubModel = Model "cubic: ax^3+bx^2+cx+d" 4 cubFunc cubFuncDer
 
 -- fourth pow model
 fourthPowFunc [a,b,c,d,e] [x] = [a*x^4 + b*x^3 + c*x^2 + d*x + e]
-fourthPowFuncDer [a,b,c,d,e] [x] = [[4*x^3, 3*x^2, 2*x, x, 1]] 
+fourthPowFuncDer [a,b,c,d,e] [x] = [[x^4, x^3, x^2, x, 1]] 
 
 fourthPowModel = Model "fourth power: ax^4+bx^3+cx^2+dx+e" 5 fourthPowFunc fourthPowFuncDer
 
@@ -63,7 +63,7 @@ expModel  = Model "exponential: a*exp(-lambda*t)+b" 3 expFunc expFuncDer
 
 basicModelList = [lineModel,quadModel,cubModel,fourthPowModel,trigModel,logModel,sinhModel,expModel]
 
-
+-- combine two model in a liear way
 combine :: Model -> Model -> Model 
 combine m1 m2 = Model newname newnum newfunc newfuncder
      where newname = name m1 ++ " & " ++ name m2
@@ -71,6 +71,7 @@ combine m1 m2 = Model newname newnum newfunc newfuncder
            newfunc = funcComb (numPara m1) (numPara m2) (function m1) (function m2)
            newfuncder = funcDerComb (numPara m1) (numPara m2) (functionDer m1) (functionDer m2)
 
+-- combine two functions in a liear way
 funcComb :: Int 
          -> Int 
          -> ([Double] -> [Double] -> [Double]) 
@@ -78,6 +79,7 @@ funcComb :: Int
          -> ([Double] -> [Double] -> [Double])
 (funcComb n m f g) lsta [x] = [(head (f (take n lsta) [x])) + (head (g (take m (drop n lsta)) [x]))] 
 
+-- combine two functionDer in a linear way 
 funcDerComb :: Int 
          -> Int 
          -> ([Double] -> [Double] -> [[Double]]) 

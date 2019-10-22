@@ -42,7 +42,7 @@ map2double = map (s2double)
 
  -- convert string to double if is valid
 s2double :: String -> Double
-s2double x 
+s2double x
     | myisNumber  x = read x :: Double
     | otherwise = error "Csv contains non-numerical data"
 
@@ -55,6 +55,13 @@ checkcol (x:t)
     | otherwise = error "Csv #columns does not equal 3 or there are value(s) missing"
 
 
+ -- check if #rows is larger than 10
+checkrow :: [a] -> [a]
+checkrow [] = []
+checkrow (x:t)
+    | (length (x:t)) >= 10 = (x:t)
+    | otherwise = error "Csv #rows does not meet the minimum requirement of 10, please provide more data groups"
+
  -- read data from the csv file
  -- fitdata format: [([x1],([y1],e1)), ([x2],([y2],e2)...([xn],([yn],en)))
  -- plotdata format: [[x1...xn], [y1...yn], [e1...en]]
@@ -63,12 +70,10 @@ readcsv filename =
   do
     file <- readFile filename
     let rawdata = [splitsep (==',') line| line <- splitsep nrcheck file]
-    let fdata = checkcol (map (filter (/="")) rawdata)
-    let transfdata = transpose fdata
-    let plotdata = (map map2double  transfdata)
+    let fdata = checkrow(checkcol (map (filter (/="")) rawdata))
+    -- let transfdata = transpose fdata
+    -- let plotdata = (map map2double  transfdata)
     let fitdata = (map wrap (map map2double fdata))
     return fitdata
 
--- Input format:
--- three colums
--- X,Y,u[X]
+
