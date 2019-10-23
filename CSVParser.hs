@@ -1,6 +1,7 @@
 module CSVParser where
 
 import Language.Haskell.TH
+import ModelBuilder
 import Data.List
 import Data.Char
 
@@ -22,7 +23,6 @@ myisNumber xs  =
   case dropWhile isDigit xs of
     ""       -> True
     ('.':ys) -> all isDigit ys
-    ('-':ys) -> all isDigit ys
     _        -> False
 
 
@@ -51,7 +51,7 @@ checkcol :: [[String]] -> Bool
 checkcol [] = True 
 checkcol (x:t)
     | (length x /= 3) = False
-    | otherwise = True 
+    | otherwise = checkcol t 
     
 -- check if #rows is larger than 10
 checkrow :: [[String]] -> Bool
@@ -59,7 +59,7 @@ checkrow lst = length lst >= 10
 
 
 -- check if all is number, the input could never be empty
--- checknumber :: [[String]] -> Bool
+checknumber :: [[String]] -> Bool
 checknumber [] = True
 checknumber (h:s) = (foldr (\x y -> (myisNumber x) && y) True h) && (checknumber s)
 
@@ -82,12 +82,12 @@ readcsv filename =
           else do
             putStrLn "Your file contains wrong type (non-number)."
             putStrLn "Please modify your data file and enter the name again."
-            filename <- getLine
+            filename <- getLineFixed
             readcsv filename              
       else do
-        putStrLn "The number of columns is not correct."
+        putStrLn "The number of columns or rows is not correct."
         putStrLn "Please modify your data file and enter the name again."
-        filename <- getLine
+        filename <- getLineFixed
         readcsv filename
 
 
