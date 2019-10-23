@@ -5,7 +5,7 @@ import Data.List
 import Data.Char
 
 
- -- splits the data read from the file
+ -- splits the data read from the file, from assignemt 3
 splitsep :: (a -> Bool) -> [a] -> [[a]]
 splitsep sep [] = [[]]
 splitsep sep (h:t)
@@ -22,6 +22,7 @@ myisNumber xs  =
   case dropWhile isDigit xs of
     ""       -> True
     ('.':ys) -> all isDigit ys
+    ('-':ys) -> all isDigit ys
     _        -> False
 
 
@@ -42,38 +43,52 @@ map2double = map (s2double)
 
  -- convert string to double if is valid
 s2double :: String -> Double
-s2double x
-    | myisNumber  x = read x :: Double
-    | otherwise = error "Csv contains non-numerical data"
+s2double x = read x :: Double
 
 
- -- check #columns and whether there is value missing
-checkcol :: Foldable t => [t a] -> [t a]
-checkcol [] = []
+-- check #columns and whether there is value missing
+checkcol :: [[String]] -> Bool
+checkcol [] = True 
 checkcol (x:t)
-    | (length x == 3) = (x: (checkcol t))
-    | otherwise = error "Csv #columns does not equal 3 or there are value(s) missing"
+    | (length x /= 3) = False
+    | otherwise = True 
+    
+-- check if #rows is larger than 10
+checkrow :: [[String]] -> Bool
+checkrow lst = length lst >= 10
 
 
- -- check if #rows is larger than 10
-checkrow :: [a] -> [a]
-checkrow [] = []
-checkrow (x:t)
-    | (length (x:t)) >= 10 = (x:t)
-    | otherwise = error "Csv #rows does not meet the minimum requirement of 10, please provide more data groups"
+-- check if all is number, the input could never be empty
+-- checknumber :: [[String]] -> Bool
+checknumber [] = True
+checknumber (h:s) = (foldr (\x y -> (myisNumber x) && y) True h) && (checknumber s)
 
- -- read data from the csv file
- -- fitdata format: [([x1],([y1],e1)), ([x2],([y2],e2)...([xn],([yn],en)))
- -- plotdata format: [[x1...xn], [y1...yn], [e1...en]]
+
+-- read data from the csv file
+-- fitdata format: [([x1],([y1],e1)), ([x2],([y2],e2)...([xn],([yn],en)))
+-- plotdata format: [[x1...xn], [y1...yn], [e1...en]]
 readcsv :: FilePath -> IO [([Double], ([Double], Double))]
 readcsv filename =
   do
     file <- readFile filename
     let rawdata = [splitsep (==',') line| line <- splitsep nrcheck file]
-    let fdata = checkrow(checkcol (map (filter (/="")) rawdata))
-    -- let transfdata = transpose fdata
-    -- let plotdata = (map map2double  transfdata)
-    let fitdata = (map wrap (map map2double fdata))
-    return fitdata
+    let fdata = (map (filter (/="")) rawdata)
+    if ((checkcol fdata) && (checkrow fdata))
+      then do 
+        if (checknumber fdata)
+          then do
+            let fitdata = map wrap (map map2double fdata)
+            return fitdata
+          else do
+            putStrLn "Your file contains wrong type (non-number)."
+            putStrLn "Please modify your data file and enter the name again."
+            filename <- getLine
+            readcsv filename              
+      else do
+        putStrLn "The number of columns is not correct."
+        putStrLn "Please modify your data file and enter the name again."
+        filename <- getLine
+        readcsv filename
+
 
 

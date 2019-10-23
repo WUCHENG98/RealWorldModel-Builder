@@ -23,20 +23,21 @@ chartresidual val model para= toRenderable layout
     vals::[(Double,Double,Double,Double)]
     vals=[(x,y,0,dy)|([x],([y],dy))<- val]
     residual = [(x,((head (((function model) para) [x]))-y),0,dy)|([x],([y],dy))<- val]
-    
+--Plot the error vars of each residual 
     bars = plot_errbars_values .~ [symErrPoint x y dx dy | (x,y,dx,dy) <- residual]
          $ plot_errbars_title .~"Error"
          $ def
-
+--Plot data points
     points = plot_points_style .~ filledCircles 2 (opaque red)
 	      $ plot_points_values .~ [(x,y) |  (x,y,dx,dy) <- residual]
         $ plot_points_title .~ "Residual"
         $ def
+--Plot a zero line
     zeroline = plot_lines_style .line_color .~ opaque red
             $ plot_lines_values .~[[(x,0)|(x,y,dx,dy) <- vals]]
             $ plot_lines_title .~ "Zero Line"
             $def
-
+--Create the layout 
     layout = layout_title .~ "Residual"
            $ layout_plots .~ [toPlot bars, toPlot points, toPlot zeroline]
            $ def
@@ -48,26 +49,30 @@ chart val model para= toRenderable layout
   where
     vals::[(Double,Double,Double,Double)]
     vals=[(x,y,0,dy)|([x],([y],dy))<- val]
-    
+
+--Add error bars of each data point
     bars = plot_errbars_values .~ [ErrPoint (ErrValue x x x) (ErrValue (y-dy) y (y+dy)) | (x,y,dx,dy) <- vals]
          $ plot_errbars_title .~"Error"
          $ def
 
+--Create model line
     modeline = plot_lines_style . line_color .~ opaque blue
         $ plot_lines_values .~ [ [ (x,(head (((function model) para) [x]))) | (x,y,dx,dy) <- vals] ]
         $ plot_lines_title .~ (name model)
         $ def
 
+--Plot data points
     points = plot_points_style .~ filledCircles 2 (opaque red)
 	   $ plot_points_values .~ [(x,y) |  (x,y,dx,dy) <- vals]
            $ plot_points_title .~ "Raw Data"
            $ def
 
+--Create the layout 
     layout = layout_title .~ (name model)++" Fitting Result"
            $ layout_plots .~ [toPlot bars, toPlot points, toPlot modeline]
            $ def
 
-
+--Draw data-model diagram as well as residual diagram
 draw :: [([Double], ([Double], Double))] -> Model -> [Double] -> IO (PickFn ())
 draw val model para = do
   zt <- getZonedTime

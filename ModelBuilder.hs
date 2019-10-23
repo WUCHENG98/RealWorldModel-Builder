@@ -1,5 +1,4 @@
 module ModelBuider where
-
 import CSVParser
 import Numeric.GSL.Fitting
 import Model 
@@ -13,7 +12,8 @@ go =
     putStrLn "Welcome to Real-World Model Builder."
     putStrLn "Please enter the filename of the CSV file you want to model."
     filename <- getLineFixed
-    dat <- readcsv filename
+    rdat <- readcsv filename
+    let dat = rdat 
     model <- selectModel
     (abstol,reltol,numiter,guess) <- askreq (numPara model) 
     let (sol,path) = fitModelScaled abstol reltol numiter (function model, functionDer model) dat guess
@@ -31,7 +31,7 @@ selectModel =
         putStrLn "There are 8 types of basics models: \n 1. Linear Model \n 2. Quadratic Model\n 3. Cubic Model\n 4. Fourth Power Model\n 5. Trig Model\n 6. Log Model\n 7. Hyperbolic Sine Model\n 8. Exponential Model"
         putStrLn "Please type in the numbers of the model you want to combine, sperated by commas."
         order <- getLineFixed 
-        let orderlist = rmvdup (splitsep (==',') order) 
+        let orderlist = (filter (all isDigit) (filter (/="") (rmvdup (splitsep (==',') order)))) 
         let model = modelCombine orderlist
         let reportmodel = "The combined model is " ++ name model
         putStrLn reportmodel
@@ -44,25 +44,62 @@ rmvdup lst = [ h | (h:t) <- tails lst,  not (h `elem` t)]
 modelCombine :: [[Char]] -> Model      
 modelCombine [] = emptyModel
 modelCombine (h:s)  
-              |(digitToInt (head h)) <= 8 = combine (basicModelList !! ((digitToInt (head h))-1)) (modelCombine s) 
+              |(read h::Int) <= 8 = combine (basicModelList !! ((read h::Int)-1)) (modelCombine s) 
               | otherwise = modelCombine s
                     
 -- ask the requirement about the fitting
 askreq :: Int -> IO (Double, Double, Int, [Double])
 askreq n = 
     do
-        putStrLn "Please indicate the absolute tolerence."
-        abs <- getLineFixed
-        let abstol = read abs :: Double
-        putStrLn "Please indicate the relative tolerence."
-        rel <- getLineFixed
-        let reltol = read rel :: Double
-        putStrLn "Please indicate the maximum iteration."
-        ite <- getLineFixed
-        let numiter = read ite :: Int
+        abstol <- askabs
+        reltol <- askrel
+        numiter <- asknum
         guess <- askguess n
         return (abstol,reltol,numiter,guess)
 
+-- ask the absolute about the fitting
+askabs :: IO Double
+askabs = 
+    do 
+        putStrLn "Please indicate the absolute tolerence."
+        abs <- getLineFixed
+        if (myisNumber abs) 
+            then do
+                    let abstol = read abs :: Double
+                    return abstol
+            else do
+                    putStrLn "The input is not a valid data."
+                    askabs
+
+-- ask the relative about the fitting
+askrel :: IO Double
+askrel = 
+    do 
+        putStrLn "Please indicate the relative tolerence."
+        rel <- getLineFixed
+        if (myisNumber rel) 
+            then do
+                    let reltol = read rel :: Double
+                    return reltol
+            else do
+                    putStrLn "The input is not a valid data."
+                    askrel               
+
+-- ask the maximale number of iterations
+asknum :: IO Int
+asknum = 
+    do 
+        putStrLn "Please indicate the maxmum number of iteration."
+        num <- getLineFixed
+        if (all isDigit num) 
+            then do
+                    let numiter = read num :: Int
+                    return numiter
+            else do
+                    putStrLn "The input is not a valid data."
+                    asknum                             
+
+-- ask user the initial guess of the parameters
 askguess :: Int -> IO [Double]
 askguess n =
     do 
@@ -70,7 +107,7 @@ askguess n =
         let msg = "You need "++(show n)++" parameters in total."
         putStrLn msg
         guessStr <- getLineFixed
-        let guessL = splitsep (==',') guessStr
+        let guessL = (filter myisNumber (splitsep (==',') guessStr))
         if (length guessL) == n
             then do 
                     let guess =  map (\ x -> read x :: Double) guessL
@@ -114,18 +151,16 @@ getLineFixed =
             newres <- getLineFixed
             return newres 
 
+-- to determine if deletion is needed
 fixdel :: [Char] -> [Char]      
 fixdel st
    | '\DEL' `elem` st = fixdel (remdel st)
    | otherwise = st
 
+-- feature the delete fucntion
 remdel :: [Char] -> [Char]
 remdel ('\DEL':r) = r
 remdel (a:'\DEL':r) = r
 remdel (a:r) = a: remdel r
 
-
-
-
-
-
+-- 1,1,1,1,1,2,3,12,23,43,,21,1,,1,1
