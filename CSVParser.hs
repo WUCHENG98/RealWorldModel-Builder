@@ -23,6 +23,7 @@ myisNumber xs  =
   case dropWhile isDigit xs of
     ""       -> True
     ('.':ys) -> all isDigit ys
+    ('-':ys) -> all isDigit ys
     _        -> False
 
 
