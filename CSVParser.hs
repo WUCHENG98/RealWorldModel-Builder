@@ -1,7 +1,6 @@
 module CSVParser where
 
 import Language.Haskell.TH
-import ModelBuilder
 import Data.List
 import Data.Char
 
@@ -91,5 +90,28 @@ readcsv filename =
         filename <- getLineFixed
         readcsv filename
 
+-- fix get line (delete and no empty), adopted from assignment 3, copy from ModelBuilder
+getLineFixed :: IO [Char]
+getLineFixed =
+    do
+      line <- getLine
+      let res = (fixdel line)
+      if (filter (/=' ') res) /= ""
+        then return res
+        else do
+            putStrLn "This line has no content, please input again."
+            newres <- getLineFixed
+            return newres 
 
+-- to determine if deletion is needed, copy from ModelBuilder
+fixdel :: [Char] -> [Char]      
+fixdel st
+     | '\DEL' `elem` st = fixdel (remdel st)
+     | otherwise = st
+
+-- feature the delete fucntion, copy from ModelBuilder
+remdel :: [Char] -> [Char]
+remdel ('\DEL':r) = r
+remdel (a:'\DEL':r) = r
+remdel (a:r) = a: remdel r
 
